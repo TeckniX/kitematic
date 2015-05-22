@@ -7,6 +7,7 @@ var ImageCard = require('./ImageCard.react');
 var Promise = require('bluebird');
 var metrics = require('../utils/MetricsUtil');
 var classNames = require('classnames');
+var ContainerUtil = require('../utils/ContainerUtil');
 
 var _recommended = [];
 var _searchPromise = null;
@@ -48,7 +49,7 @@ module.exports = React.createClass({
       loading: true
     });
 
-    _searchPromise = Promise.delay(200).cancellable().then(() => Promise.resolve($.get('https://registry.hub.docker.com/v1/search?q=' + query))).then(data => {
+    _searchPromise = Promise.delay(200).cancellable().then(() => Promise.resolve(ContainerUtil.search(query))).then(data => {
       metrics.track('Searched for Images');
       this.setState({
         results: data.results,
@@ -63,17 +64,13 @@ module.exports = React.createClass({
     if (_recommended.length) {
       return;
     }
-    Promise.resolve($.ajax({
-      url: 'https://kitematic.com/recommended.json',
-      cache: false,
-      dataType: 'json',
-    })).then(res => res.repos).map(repo => {
+    Promise.resolve(ContainerUtil.getRecommended()).then(res => res.repos).map(repo => {
       var query = repo.repo;
       var vals = query.split('/');
       if (vals.length === 1) {
         query = 'library/' + vals[0];
       }
-      return $.get('https://registry.hub.docker.com/v1/repositories_info/' + query).then(data => {
+      return ContainerUtil.repoInfo(query).then(data => {
         var res = _.extend(data, repo);
         res.description = data.short_description;
         res.is_official = data.namespace === 'library';

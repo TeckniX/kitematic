@@ -7,7 +7,8 @@ var Preferences = React.createClass({
   getInitialState: function () {
     return {
       closeVMOnQuit: localStorage.getItem('settings.closeVMOnQuit') === 'true',
-      metricsEnabled: metrics.enabled()
+      metricsEnabled: metrics.enabled(),
+      localRepoEnabled: localStorage.getItem('settings.localRepoEnabled') === 'true',
     };
   },
   handleGoBackClick: function () {
@@ -34,6 +35,16 @@ var Preferences = React.createClass({
       enabled: checked
     });
   },
+  handleChangeLocalRepoEnabled: function (e) {
+    var checked = e.target.checked;
+    this.setState({
+      localRepoEnabled: checked
+    });
+    localStorage.setItem('settings.localRepoEnabled', checked);
+    metrics.track('Toggled Local Repo', {
+      enabled: checked
+    });
+  },
   render: function () {
     return (
       <div className="preferences">
@@ -55,6 +66,15 @@ var Preferences = React.createClass({
             </div>
             <div className="option-value">
               <input type="checkbox" checked={this.state.metricsEnabled} onChange={this.handleChangeMetricsEnabled}/>
+            </div>
+          </div>
+          <div className="title">API Settings</div>
+          <div className="option">
+            <div className="option-name">
+              Use local API file in the repo folder (api.json)
+            </div>
+            <div className="option-value">
+              <input type="checkbox" checked={this.state.localRepoEnabled} onChange={this.handleChangeLocalRepoEnabled}/>
             </div>
           </div>
         </div>
