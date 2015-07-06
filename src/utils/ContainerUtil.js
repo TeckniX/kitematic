@@ -13,6 +13,20 @@ var ContainerUtil = {
     });
   },
 
+  // Provide device support
+  device: function (container) {
+    if (!container || !container.Devices) {
+      return [false, ""];
+    }
+    let device = false;
+    let devicePath = "";
+    if (container.Devices.PathOnHost) {
+      device = true;
+      devicePath = container.Devices.PathOnHost;
+    }
+    return [device, devicePath];
+  },
+
   // Provide Foreground options
   mode: function (container) {
     if (!container || !container.Config) {
