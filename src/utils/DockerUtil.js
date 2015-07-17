@@ -173,7 +173,6 @@ export default {
   },
 
   run (name, repository, tag, local=false) {
-    console.log("Running: %o - %o - %o", name, repository, tag);
     tag = tag || 'latest';
     let imageName = repository + ':' + tag;
 
@@ -195,10 +194,8 @@ export default {
     this.placeholders[name] = placeholderData;
     localStorage.setItem('placeholders', JSON.stringify(this.placeholders));
     if (local) {
-      console.log("Creating directly: %o", imageName);
       this.createContainer(name, {Image: imageName, Tty: true, OpenStdin: true});
     } else {
-      console.log("Pulling image: %o", imageName);
       this.pullImage(repository, tag, error => {
         if (error) {
           containerServerActions.error({name, error});
