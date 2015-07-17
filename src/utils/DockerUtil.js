@@ -7,6 +7,7 @@ import util from './Util';
 import hubUtil from './HubUtil';
 import metrics from '../utils/MetricsUtil';
 import containerServerActions from '../actions/ContainerServerActions';
+import imageActions from '../actions/ImageActions';
 import Promise from 'bluebird';
 import rimraf from 'rimraf';
 
@@ -39,6 +40,7 @@ export default {
   init () {
     this.placeholders = JSON.parse(localStorage.getItem('placeholders')) || {};
     this.fetchAllContainers();
+    this.fetchAllImages();
     this.listen();
 
     // Resume pulling containers that were previously being pulled
@@ -155,7 +157,23 @@ export default {
     });
   },
 
-  run (name, repository, tag) {
+  fetchAllImages () {
+    // this.client.loadImage();
+    // this.client.createImage({fromImage: testImage}, handler);
+    // this.client.buildImage();
+    // this.client.listImages(function(err, list){});
+    // this.client.getImage();
+    this.client.listImages(function(err, list){
+      if (err) {
+        imageActions.error({error});
+      } else {
+        imageActions.updated(list);
+      }
+    });
+  },
+
+  run (name, repository, tag, local=false) {
+    console.log("Running: %o - %o - %o", name, repository, tag);
     tag = tag || 'latest';
     let imageName = repository + ':' + tag;
 
@@ -176,32 +194,37 @@ export default {
 
     this.placeholders[name] = placeholderData;
     localStorage.setItem('placeholders', JSON.stringify(this.placeholders));
-
-    this.pullImage(repository, tag, error => {
-      if (error) {
-        containerServerActions.error({name, error});
-        return;
-      }
-
-      if (!this.placeholders[name]) {
-        return;
-      }
-
-      delete this.placeholders[name];
-      localStorage.setItem('placeholders', JSON.stringify(this.placeholders));
+    if (local) {
+      console.log("Creating directly: %o", imageName);
       this.createContainer(name, {Image: imageName, Tty: true, OpenStdin: true});
-    },
+    } else {
+      console.log("Pulling image: %o", imageName);
+      this.pullImage(repository, tag, error => {
+        if (error) {
+          containerServerActions.error({name, error});
+          return;
+        }
 
-    // progress is actually the progression PER LAYER (combined in columns)
-    // not total because it's not accurate enough
-    progress => {
-      containerServerActions.progress({name, progress});
-    },
+        if (!this.placeholders[name]) {
+          return;
+        }
+
+        delete this.placeholders[name];
+        localStorage.setItem('placeholders', JSON.stringify(this.placeholders));
+        this.createContainer(name, {Image: imageName, Tty: true, OpenStdin: true});
+      },
+
+      // progress is actually the progression PER LAYER (combined in columns)
+      // not total because it's not accurate enough
+      progress => {
+        containerServerActions.progress({name, progress});
+      },
 
 
-    () => {
-      containerServerActions.waiting({name, waiting: true});
-    });
+      () => {
+        containerServerActions.waiting({name, waiting: true});
+      });
+    }
   },
 
   updateContainer (name, data) {
@@ -364,6 +387,7 @@ export default {
 
     this.client.pull(repository + ':' + tag, opts, (err, stream) => {
       if (err) {
+        console.log("Err: %o", err);
         callback(err);
         return;
       }

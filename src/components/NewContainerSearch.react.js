@@ -10,6 +10,8 @@ import repositoryActions from '../actions/RepositoryActions';
 import repositoryStore from '../stores/RepositoryStore';
 import accountStore from '../stores/AccountStore';
 import accountActions from '../actions/AccountActions';
+import imageActions from '../actions/ImageActions';
+import imageStore from '../stores/ImageStore';
 
 var _searchPromise = null;
 
@@ -20,6 +22,7 @@ module.exports = React.createClass({
       query: '',
       loading: repositoryStore.loading(),
       repos: repositoryStore.all(),
+      images: imageStore.all(),
       username: accountStore.getState().username,
       verified: accountStore.getState().verified,
       accountLoading: accountStore.getState().loading,
@@ -30,6 +33,7 @@ module.exports = React.createClass({
     this.refs.searchInput.getDOMNode().focus();
     repositoryStore.listen(this.update);
     accountStore.listen(this.updateAccount);
+    imageStore.listen(this.updateImage);
     repositoryActions.search();
   },
   componentWillUnmount: function () {
@@ -44,6 +48,11 @@ module.exports = React.createClass({
     this.setState({
       loading: repositoryStore.loading(),
       repos: repositoryStore.all()
+    });
+  },
+  updateImage: function (imageStore) {
+    this.setState({
+      images: imageStore.images
     });
   },
   updateAccount: function () {
@@ -82,6 +91,10 @@ module.exports = React.createClass({
     // If we're clicking on the filter again - refresh
     if (filter === 'userrepos' && this.getQuery().filter === 'userrepos') {
       repositoryActions.repos();
+    }
+
+    if (filter === 'userimages' && this.getQuery().filter === 'userimages') {
+      imageActions.all();
     }
 
     if (filter === 'recommended' && this.getQuery().filter === 'recommended') {
@@ -184,6 +197,29 @@ module.exports = React.createClass({
           {otherResults}
         </div>
       );
+    } else if (filter === 'userimages') {
+      let userImageItems = this.state.images.map(image => {
+        // Split repo tag for namespace
+        let [repo, tag] = image.RepoTags[0].split(':');
+        [image.namespace, image.name] = repo.split('/');
+        image.description = null;
+        image.star_count = 0;
+        image.is_local = true;
+        return (<ImageCard key={image.namespace + '/' + image.name} image={image} />);
+      });
+      let userImageResults = userImageItems.length ? (
+        <div>
+          <h4>My Images</h4>
+          <div className="result-grid">
+            {userImageItems}
+          </div>
+        </div>
+      ) : null;
+      results = (
+        <div className="result-grids">
+          {userImageResults}
+        </div>
+      );
     } else {
       if (this.state.query.length) {
         results = (
@@ -232,6 +268,7 @@ module.exports = React.createClass({
               <span className={`results-filter results-all tab ${filter === 'all' ? 'active' : ''}`} onClick={this.handleFilter.bind(this, 'all')}>All</span>
               <span className={`results-filter results-recommended tab ${filter === 'recommended' ? 'active' : ''}`} onClick={this.handleFilter.bind(this, 'recommended')}>Recommended</span>
               <span className={`results-filter results-userrepos tab ${filter === 'userrepos' ? 'active' : ''}`} onClick={this.handleFilter.bind(this, 'userrepos')}>My Repos</span>
+              <span className={`results-filter results-userimages tab ${filter === 'userimages' ? 'active' : ''}`} onClick={this.handleFilter.bind(this, 'userimages')}>My Images</span>
             </div>
           </div>
           <div className="results">
